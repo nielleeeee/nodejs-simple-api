@@ -1,6 +1,7 @@
 const express = require("express");
 const fs = require("fs");
 const multer = require("multer");
+const pool = require("./db");
 
 const app = express();
 const port = 3000;
@@ -8,91 +9,115 @@ const upload = multer();
 
 app.use(express.json());
 
-const users = [
-  { id: "1", name: "Jan", age: 30 },
-  { id: "2", name: "John", age: 25 },
-  { id: "3", name: "Danielle", age: 35 },
-];
-
 app.get("/", (req, res) => {
   res.send("Simple Nodejs API");
 });
 
-app.get("/users", (req, res) => {
-  res.status(200).json(users);
+app.get("/todo", async (req, res) => {
+  try {
+    const result = await pool.query("SELECT * FROM todos");
+
+    res.status(200).json(result.rows);
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ message: "Internal server error", error });
+  }
 });
 
-app.get("/users/:id", (req, res) => {
+app.get("/todo/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    if (!id) {
+      return res.status(400).json({ message: "Invalid Todo Item ID" });
+    }
+
+    const result = await pool.query("SELECT * FROM todos WHERE id = $1", [id]);
+
+    const todoItem = result.rows[0];
+
+    if (!todoItem) {
+      return res.status(404).json({ message: "Todo Item not found" });
+    }
+
+    return res.status(200).json(todoItem);
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ message: "Internal server error", error });
+  }
+});
+
+app.post("/todo", async (req, res) => {
+  const { title, description } = req.body;
+
+  try {
+    if (!title || !description) {
+      return res.status(400).json({ message: "Invalid Todo Data" });
+    }
+
+    const result = await pool.query(
+      "INSERT INTO todos (title, description) VALUES ($1, $2) RETURNING *",
+      [title, description]
+    );
+
+    const todoItem = result.rows[0];
+
+    return res.status(201).json(todoItem);
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ message: "Internal server error", error });
+  }
+});
+
+app.patch("/todo/:id", async (req, res) => {
+  const { id } = req.params;
+
+  const { title, description } = req.body;
+
+  if (!id) {
+    return res.status(400).json({ message: "Invalid Todo Item ID" });
+  }
+
+  if (!title || !description) {
+    return res.status(404).json({ message: "Invalid Update Data" });
+  }
+
+  try {
+    const result = await pool.query(
+      "UPDATE todos SET title='$1', description='$2' WHERE id = $3 RETURNING *",
+      [title, description, id]
+    );
+
+    const todoItemUpdated = result.rows[0];
+
+    if (!todoItemUpdated) {
+      return res.status(404).json({ message: "Todo Item not found" });
+    }
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ message: "Internal server error", error });
+  }
+});
+
+app.delete("/todo/:id", async (req, res) => {
   const { id } = req.params;
 
   if (!id) {
     return res.status(400).json({ message: "Invalid User ID" });
   }
 
-  const user = users.find((user) => user.id === id);
+  const result = await pool.query(
+    "DELETE FROM todos WHERE id='$1' RETURNING *",
+    [id]
+  );
 
-  if (!user) {
-    return res.status(404).json({ message: "User not found" });
+  const todoDelete = result.rows[0];
+
+  if (!todoDelete) {
+    return res.status(404).json({ message: "Todo Item not found" });
   }
 
-  return res.status(200).json(user);
-});
-
-app.post("/users", (req, res) => {
-  const { name, age } = req.body;
-
-  if (!name || !age) {
-    return res.status(400).json({ message: "Invalid User Data" });
-  }
-
-  const newUser = { id: (users.length + 1).toString(), name, age };
-
-  users.push(newUser);
-
-  return res.status(201).json(newUser);
-});
-
-app.patch("/users/:id", (req, res) => {
-  const { id } = req.params;
-
-  const { name, age } = req.body;
-
-  if (!id) {
-    return res.status(400).json({ message: "Invalid User ID" });
-  }
-
-  const user = users.find((user) => user.id === id);
-
-  if (!user) {
-    return res.status(404).json({ message: "User not found" });
-  }
-
-  if (!name || !age) {
-    return res.status(400).json({ message: "Missing User Data" });
-  }
-
-  user.name = name;
-  user.age = age;
-
-  return res.status(200).json(user);
-});
-
-app.delete("/users/:id", (req, res) => {
-  const { id } = req.params;
-
-  if (!id) {
-    return res.status(400).json({ message: "Invalid User ID" });
-  }
-
-  const user = users.find((user) => user.id === id);
-
-  if (!user) {
-    return res.status(404).json({ message: "User not found" });
-  }
-
-  users = users.filter((user) => user.id !== id);
-
-  return res.status(200).json(user);
+  return res.status(200).json(todoDelete);
 });
 
 // File checker
