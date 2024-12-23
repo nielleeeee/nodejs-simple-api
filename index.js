@@ -13,6 +13,7 @@ app.get("/", (req, res) => {
   res.send("Simple Nodejs API");
 });
 
+// Get all todo item
 app.get("/todo", async (req, res) => {
   try {
     const result = await pool.query("SELECT * FROM todos");
@@ -24,6 +25,7 @@ app.get("/todo", async (req, res) => {
   }
 });
 
+// Get single todo item
 app.get("/todo/:id", async (req, res) => {
   try {
     const { id } = req.params;
@@ -47,6 +49,7 @@ app.get("/todo/:id", async (req, res) => {
   }
 });
 
+// Create new todo item
 app.post("/todo", async (req, res) => {
   const { title, description } = req.body;
 
@@ -69,6 +72,7 @@ app.post("/todo", async (req, res) => {
   }
 });
 
+// Update todo item
 app.patch("/todo/:id", async (req, res) => {
   const { id } = req.params;
 
@@ -99,6 +103,38 @@ app.patch("/todo/:id", async (req, res) => {
   }
 });
 
+app.patch("/todo/:id/complete", async (req, res) => {
+  const { id } = req.params;
+  const { completed } = req.body;
+
+  if (!id) {
+    return res.status(400).json({ message: "Invalid Todo Item ID" });
+  }
+
+  if (typeof completed !== Boolean) {
+    return res.status(400).json({ message: "Invalid Completed Data" });
+  }
+
+  try {
+    const result = await pool.query(
+      "UPDATE todos SET completed = $1 WHERE id = $2 RETURNING *",
+      [completed, id]
+    );
+
+    const todoItemUpdated = result.rows[0];
+
+    if (!todoItemUpdated) {
+      return res.status(404).json({ message: "Todo Item not found" });
+    }
+
+    return res.status(200).json(todoItemUpdated);
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ message: "Internal server error", error });
+  }
+});
+
+// Delete todo item
 app.delete("/todo/:id", async (req, res) => {
   const { id } = req.params;
 
