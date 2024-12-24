@@ -88,7 +88,7 @@ app.patch("/todo/:id", async (req, res) => {
 
   try {
     const result = await pool.query(
-      "UPDATE todos SET title='$1', description='$2' WHERE id = $3 RETURNING *",
+      "UPDATE todos SET title = $1, description = $2 WHERE id = $3 RETURNING *",
       [title, description, id]
     );
 
@@ -97,6 +97,8 @@ app.patch("/todo/:id", async (req, res) => {
     if (!todoItemUpdated) {
       return res.status(404).json({ message: "Todo Item not found" });
     }
+
+    return res.status(200).json(todoItemUpdated);
   } catch (error) {
     console.error(error);
     return res.status(500).json({ message: "Internal server error", error });
@@ -111,7 +113,7 @@ app.patch("/todo/:id/complete", async (req, res) => {
     return res.status(400).json({ message: "Invalid Todo Item ID" });
   }
 
-  if (typeof completed !== Boolean) {
+  if (typeof completed !== "boolean") {
     return res.status(400).json({ message: "Invalid Completed Data" });
   }
 
@@ -143,7 +145,7 @@ app.delete("/todo/:id", async (req, res) => {
   }
 
   const result = await pool.query(
-    "DELETE FROM todos WHERE id='$1' RETURNING *",
+    "DELETE FROM todos WHERE id = $1 RETURNING *",
     [id]
   );
 
