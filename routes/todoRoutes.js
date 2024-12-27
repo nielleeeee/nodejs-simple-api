@@ -11,20 +11,20 @@ import {
 const router = express.Router();
 
 // Get all todo item
-router.get("/todo", getAllTodo);
+router.get("/", getAllTodo);
 
 // Get single todo item
-router.get("/todo/:id", getTodoById);
+router.get("/:id", getTodoById);
 
 // Create new todo item
-router.post("/todo", createTodo);
+router.post("/", createTodo);
 
 // Update todo item
-router.patch("/todo/:id", updateTodo);
+router.patch("/:id", updateTodo);
 
-router.patch("/todo/:id/complete", completeTodo);
+router.patch("/:id/complete", completeTodo);
 
 // Delete todo item
-router.delete("/todo/:id", deleteTodo);
+router.delete("/:id", deleteTodo);
 
 export default router;
