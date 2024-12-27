@@ -3,6 +3,6 @@ import { fetchThirdPartyData } from "../controllers/fetchThirdPartyController.js
 
 const router = express.Router();
 
-router.post("/third-party", fetchThirdPartyData);
+router.post("/", fetchThirdPartyData);
 
 export default router;
