@@ -6,6 +6,6 @@ const router = express.Router();
 
 const upload = multer();
 
-router.post("/check", upload.single("file"), fileChecker);
+router.post("/", upload.single("file"), fileChecker);
 
 export default router;
