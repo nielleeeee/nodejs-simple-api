@@ -1,10 +1,32 @@
-import pool from "../db/pool";
+import pool from "../db/pool.js";
 
 export const getAllTodo = async (req, res) => {
   try {
-    const result = await pool.query("SELECT * FROM todos");
+    const { page = 1, limit = 10 } = req.query;
+    const itemsPerPage = Math.min(Math.max(parseInt(limit, 10), 1), 20);
+    const offset = (page - 1) * itemsPerPage;
 
-    res.status(200).json(result.rows);
+    const result = await pool.query(
+      "SELECT * FROM todos ORDER BY id ASC LIMIT $1 OFFSET $2",
+      [itemsPerPage, offset]
+    );
+
+    const totalItemsResult = await pool.query("SELECT COUNT(*) FROM todos");
+    const totalItems = parseInt(totalItemsResult.rows[0].count, 10);
+    const totalPages = Math.ceil(totalItems / itemsPerPage);
+
+    const returnObject = {
+      todos: result.rows,
+      pagination: {
+        currentPage: parseInt(page, 10),
+        totalPages,
+        itemsPerPage,
+        totalItems,
+        hasNextPage: page < totalPages,
+      },
+    };
+
+    res.status(200).json(returnObject);
   } catch (error) {
     console.error(error);
     return res.status(500).json({ message: "Internal server error", error });
