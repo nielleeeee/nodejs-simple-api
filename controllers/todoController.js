@@ -2,9 +2,20 @@ import pool from "../db/pool.js";
 
 export const getAllTodo = async (req, res) => {
   try {
-    const { page = 1, limit = 10 } = req.query;
-    const itemsPerPage = Math.min(Math.max(parseInt(limit, 10), 1), 20);
+    let { page = 1, limit = 10 } = req.query;
+    const itemsPerPage = Math.min(Math.max(parseInt(limit, 10) || 10, 1), 20);
     const offset = (page - 1) * itemsPerPage;
+
+    page = parseInt(page, 10);
+    limit = parseInt(limit, 10);
+
+    if (isNaN(page) || page < 1) {
+      return res.status(400).json({ message: "Invalid Page Number" });
+    }
+
+    if (isNaN(limit) || limit < 1 || limit > 20) {
+      return res.status(400).json({ message: "Invalid Limit Value" });
+    }
 
     const result = await pool.query(
       "SELECT * FROM todos ORDER BY id ASC LIMIT $1 OFFSET $2",
@@ -29,7 +40,7 @@ export const getAllTodo = async (req, res) => {
     res.status(200).json(returnObject);
   } catch (error) {
     console.error(error);
-    return res.status(500).json({ message: "Internal server error", error });
+    return res.status(500).json({ message: "Internal server error" });
   }
 };
 
@@ -52,7 +63,7 @@ export const getTodoById = async (req, res) => {
     return res.status(200).json(todoItem);
   } catch (error) {
     console.error(error);
-    return res.status(500).json({ message: "Internal server error", error });
+    return res.status(500).json({ message: "Internal server error" });
   }
 };
 
@@ -74,7 +85,7 @@ export const createTodo = async (req, res) => {
     return res.status(201).json(todoItem);
   } catch (error) {
     console.error(error);
-    return res.status(500).json({ message: "Internal server error", error });
+    return res.status(500).json({ message: "Internal server error" });
   }
 };
 
@@ -106,7 +117,7 @@ export const updateTodo = async (req, res) => {
     return res.status(200).json(todoItemUpdated);
   } catch (error) {
     console.error(error);
-    return res.status(500).json({ message: "Internal server error", error });
+    return res.status(500).json({ message: "Internal server error" });
   }
 };
 
@@ -137,7 +148,7 @@ export const completeTodo = async (req, res) => {
     return res.status(200).json(todoItemUpdated);
   } catch (error) {
     console.error(error);
-    return res.status(500).json({ message: "Internal server error", error });
+    return res.status(500).json({ message: "Internal server error" });
   }
 };
 
