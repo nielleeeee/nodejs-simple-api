@@ -7,8 +7,9 @@ export const fetchThirdPartyData = async (req: Request, res: Response) => {
     );
     const data = await rawData.json();
 
-    return res.status(200).json({ message: "Fetching data from API", data });
+    res.status(200).json({ message: "Fetching data from API", data });
   } catch (error) {
+    console.error(error);
     res.status(500).json({ message: "Internal server error", error });
   }
 };
