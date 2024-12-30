@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
 
-export const fetchThirdPartyData = async (req: Request, res: Response) => {
+export const fetchThirdPartyData = async (req: Request, res: Response): Promise<void> => {
   try {
     const rawData = await fetch(
       "https://64f4a6b7932537f4051a9111.mockapi.io/nielle/store-data"
