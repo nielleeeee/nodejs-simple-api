@@ -1,17 +1,26 @@
 import { Request, Response } from "express";
-import pool from "../db/pool";
+import pool from "@/db/pool";
 
 interface GetAllTodoQueryParams {
   page?: string;
   limit?: string;
 }
 
+interface TodoItem {
+  id: number;
+  title: string;
+  description: string;
+  completed: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
 export const getAllTodo = async (
-  req: Request<{}, {}, {}, GetAllTodoQueryParams>,
+  req: Request,
   res: Response
-) => {
+): Promise<void> => {
   try {
-    let { page = "1", limit = "10" } = req.query;
+    let { page = "1", limit = "10" } = req.query as GetAllTodoQueryParams;
 
     const parsedPage = parseInt(page, 10);
     const parsedLimit = parseInt(limit, 10);
@@ -20,11 +29,13 @@ export const getAllTodo = async (
     const offset = (parsedPage - 1) * itemsPerPage;
 
     if (isNaN(parsedPage) || parsedPage < 1) {
-      return res.status(400).json({ message: "Invalid Page Number" });
+      res.status(400).json({ message: "Invalid Page Number" });
+      return;
     }
 
     if (isNaN(parsedLimit) || parsedLimit < 1 || parsedLimit > 20) {
-      return res.status(400).json({ message: "Invalid Limit Value" });
+      res.status(400).json({ message: "Invalid Limit Value" });
+      return;
     }
 
     const result = await pool.query(
@@ -33,7 +44,7 @@ export const getAllTodo = async (
     );
 
     const totalItemsResult = await pool.query("SELECT COUNT(*) FROM todos");
-    const totalItems = parseInt(totalItemsResult.rows[0].count, 10);
+    const totalItems = parseInt(totalItemsResult.rows[0].count as string, 10);
     const totalPages = Math.ceil(totalItems / itemsPerPage);
 
     const returnObject = {
@@ -50,39 +61,48 @@ export const getAllTodo = async (
     res.status(200).json(returnObject);
   } catch (error) {
     console.error(error);
-    return res.status(500).json({ message: "Internal server error" });
+    res.status(500).json({ message: "Internal server error" });
   }
 };
 
-export const getTodoById = async (req: Request, res: Response) => {
+export const getTodoById = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
   try {
     const { id } = req.params;
 
     if (!id) {
-      return res.status(400).json({ message: "Invalid Todo Item ID" });
+      res.status(400).json({ message: "Invalid Todo Item ID" });
+      return;
     }
 
     const result = await pool.query("SELECT * FROM todos WHERE id = $1", [id]);
 
-    const todoItem = result.rows[0];
+    const todoItem = result.rows[0] as TodoItem;
 
     if (!todoItem) {
-      return res.status(404).json({ message: "Todo Item not found" });
+      res.status(404).json({ message: "Todo Item not found" });
+      return;
     }
 
-    return res.status(200).json(todoItem);
+    res.status(200).json(todoItem);
   } catch (error) {
     console.error(error);
-    return res.status(500).json({ message: "Internal server error" });
+    res.status(500).json({ message: "Internal server error" });
   }
 };
 
-export const createTodo = async (req: Request, res: Response) => {
-  const { title, description } = req.body;
+export const createTodo = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
+  const { title, description } = req.body as TodoItem;
 
   try {
     if (!title || !description) {
-      return res.status(400).json({ message: "Invalid Todo Data" });
+      res.status(400).json({ message: "Invalid Todo Data" });
+      return;
     }
 
     const result = await pool.query(
@@ -90,26 +110,31 @@ export const createTodo = async (req: Request, res: Response) => {
       [title, description]
     );
 
-    const todoItem = result.rows[0];
+    const todoItem = result.rows[0] as TodoItem;
 
-    return res.status(201).json(todoItem);
+    res.status(201).json(todoItem);
   } catch (error) {
     console.error(error);
-    return res.status(500).json({ message: "Internal server error" });
+    res.status(500).json({ message: "Internal server error" });
   }
 };
 
-export const updateTodo = async (req: Request, res: Response) => {
+export const updateTodo = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
   const { id } = req.params;
 
-  const { title, description } = req.body;
+  const { title, description } = req.body as TodoItem;
 
   if (!id) {
-    return res.status(400).json({ message: "Invalid Todo Item ID" });
+    res.status(400).json({ message: "Invalid Todo Item ID" });
+    return;
   }
 
   if (!title || !description) {
-    return res.status(404).json({ message: "Invalid Update Data" });
+    res.status(404).json({ message: "Invalid Update Data" });
+    return;
   }
 
   try {
@@ -118,29 +143,35 @@ export const updateTodo = async (req: Request, res: Response) => {
       [title, description, id]
     );
 
-    const todoItemUpdated = result.rows[0];
+    const todoItemUpdated = result.rows[0] as TodoItem;
 
     if (!todoItemUpdated) {
-      return res.status(404).json({ message: "Todo Item not found" });
+      res.status(404).json({ message: "Todo Item not found" });
+      return;
     }
 
-    return res.status(200).json(todoItemUpdated);
+    res.status(200).json(todoItemUpdated);
   } catch (error) {
     console.error(error);
-    return res.status(500).json({ message: "Internal server error" });
+    res.status(500).json({ message: "Internal server error" });
   }
 };
 
-export const completeTodo = async (req: Request, res: Response) => {
+export const completeTodo = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
   const { id } = req.params;
-  const { completed } = req.body;
+  const { completed } = req.body as TodoItem;
 
   if (!id) {
-    return res.status(400).json({ message: "Invalid Todo Item ID" });
+    res.status(400).json({ message: "Invalid Todo Item ID" });
+    return;
   }
 
   if (typeof completed !== "boolean") {
-    return res.status(400).json({ message: "Invalid Completed Data" });
+    res.status(400).json({ message: "Invalid Completed Data" });
+    return;
   }
 
   try {
@@ -149,36 +180,47 @@ export const completeTodo = async (req: Request, res: Response) => {
       [completed, id]
     );
 
-    const todoItemUpdated = result.rows[0];
+    const todoItemUpdated = result.rows[0] as TodoItem;
 
     if (!todoItemUpdated) {
-      return res.status(404).json({ message: "Todo Item not found" });
+      res.status(404).json({ message: "Todo Item not found" });
+      return;
     }
 
-    return res.status(200).json(todoItemUpdated);
+    res.status(200).json(todoItemUpdated);
   } catch (error) {
     console.error(error);
-    return res.status(500).json({ message: "Internal server error" });
+    res.status(500).json({ message: "Internal server error" });
   }
 };
 
-export const deleteTodo = async (req: Request, res: Response) => {
+export const deleteTodo = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
   const { id } = req.params;
 
   if (!id) {
-    return res.status(400).json({ message: "Invalid User ID" });
+    res.status(400).json({ message: "Invalid User ID" });
+    return;
   }
 
-  const result = await pool.query(
-    "DELETE FROM todos WHERE id = $1 RETURNING *",
-    [id]
-  );
+  try {
+    const result = await pool.query(
+      "DELETE FROM todos WHERE id = $1 RETURNING *",
+      [id]
+    );
 
-  const todoDelete = result.rows[0];
+    const todoDelete = result.rows[0] as TodoItem;
 
-  if (!todoDelete) {
-    return res.status(404).json({ message: "Todo Item not found" });
+    if (!todoDelete) {
+      res.status(404).json({ message: "Todo Item not found" });
+      return;
+    }
+
+    res.status(200).json(todoDelete);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Internal server error" });
   }
-
-  return res.status(200).json(todoDelete);
 };
