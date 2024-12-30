@@ -1,7 +1,7 @@
 import express from "express";
-import todoRoutes from "./routes/todoRoutes";
-import fileRoutes from "./routes/fileroutes";
-import thirdPartyRoutes from "./routes/thirdPartyRoutes";
+import todoRoutes from "@/routes/todoRoutes";
+import fileRoutes from "@/routes/fileroutes";
+import thirdPartyRoutes from "@/routes/thirdPartyRoutes";
 
 const app = express();
 
