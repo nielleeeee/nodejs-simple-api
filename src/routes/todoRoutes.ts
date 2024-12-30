@@ -1,4 +1,4 @@
-import express, { Request, Response } from "express";
+import express from "express";
 import {
   getAllTodo,
   getTodoById,
@@ -6,37 +6,25 @@ import {
   updateTodo,
   completeTodo,
   deleteTodo,
-} from "../controllers/todoController";
+} from "@/controllers/todoController";
 
 const router = express.Router();
 
 // Get all todo item
-router.get("/", (req: Request, res: Response) => {
-  getAllTodo(req, res);
-});
+router.get("/", getAllTodo);
 
 // Get single todo item
-router.get("/:id", (req: Request, res: Response) => {
-  getTodoById(req, res);
-});
+router.get("/:id", getTodoById);
 
 // Create new todo item
-router.post("/", (req: Request, res: Response) => {
-  createTodo(req, res);
-});
+router.post("/", createTodo);
 
 // Update todo item
-router.patch("/:id", (req: Request, res: Response) => {
-  updateTodo(req, res);
-});
+router.patch("/:id", updateTodo);
 
-router.patch("/:id/complete", (req: Request, res: Response) => {
-  completeTodo(req, res);
-});
+router.patch("/:id/complete", completeTodo);
 
 // Delete todo item
-router.delete("/:id", (req: Request, res: Response) => {
-  deleteTodo(req, res);
-});
+router.delete("/:id", deleteTodo);
 
 export default router;
