@@ -1,5 +1,5 @@
 import express from "express";
-import { fileChecker } from "../controllers/fileCheckerController";
+import { fileChecker } from "@/controllers/fileCheckerController";
 import multer from "multer";
 
 const router = express.Router();
