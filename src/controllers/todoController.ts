@@ -1,5 +1,7 @@
 import { Request, Response } from "express";
-import pool from "@/db/pool";
+import { db } from "@/db";
+import { eq, sql } from "drizzle-orm";
+import { todos } from "@/db/schema";
 
 interface GetAllTodoQueryParams {
   page?: string;
@@ -38,17 +40,21 @@ export const getAllTodo = async (
       return;
     }
 
-    const result = await pool.query(
-      "SELECT * FROM todos ORDER BY id ASC LIMIT $1 OFFSET $2",
-      [itemsPerPage, offset]
-    );
+    const todoResult = await db
+      .select()
+      .from(todos)
+      .orderBy(todos.id)
+      .limit(itemsPerPage)
+      .offset(offset);
 
-    const totalItemsResult = await pool.query("SELECT COUNT(*) FROM todos");
-    const totalItems = parseInt(totalItemsResult.rows[0].count as string, 10);
+    const totalItemsResult = await db
+      .select({ count: sql`COUNT(*)`.as("count") })
+      .from(todos);
+    const totalItems = parseInt(totalItemsResult[0].count as string, 10);
     const totalPages = Math.ceil(totalItems / itemsPerPage);
 
     const returnObject = {
-      todos: result.rows,
+      todos: todoResult,
       pagination: {
         currentPage: parseInt(page, 10),
         totalPages,
@@ -77,9 +83,12 @@ export const getTodoById = async (
       return;
     }
 
-    const result = await pool.query("SELECT * FROM todos WHERE id = $1", [id]);
+    const result = await db
+      .select()
+      .from(todos)
+      .where(eq(todos.id, Number(id)));
 
-    const todoItem = result.rows[0] as TodoItem;
+    const todoItem = result[0];
 
     if (!todoItem) {
       res.status(404).json({ message: "Todo Item not found" });
@@ -105,14 +114,14 @@ export const createTodo = async (
       return;
     }
 
-    const result = await pool.query(
-      "INSERT INTO todos (title, description) VALUES ($1, $2) RETURNING *",
-      [title, description]
-    );
+    const result = await db
+      .insert(todos)
+      .values({ title, description })
+      .returning();
 
-    const todoItem = result.rows[0] as TodoItem;
+    const newTodo = result[0];
 
-    res.status(201).json(todoItem);
+    res.status(201).json(newTodo);
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: "Internal server error" });
@@ -138,12 +147,11 @@ export const updateTodo = async (
   }
 
   try {
-    const result = await pool.query(
-      "UPDATE todos SET title = $1, description = $2 WHERE id = $3 RETURNING *",
-      [title, description, id]
-    );
-
-    const todoItemUpdated = result.rows[0] as TodoItem;
+    const todoItemUpdated = await db
+      .update(todos)
+      .set({ title, description })
+      .where(eq(todos.id, Number(id)))
+      .returning();
 
     if (!todoItemUpdated) {
       res.status(404).json({ message: "Todo Item not found" });
@@ -175,12 +183,13 @@ export const completeTodo = async (
   }
 
   try {
-    const result = await pool.query(
-      "UPDATE todos SET completed = $1 WHERE id = $2 RETURNING *",
-      [completed, id]
-    );
+    const result = await db
+      .update(todos)
+      .set({ completed })
+      .where(eq(todos.id, Number(id)))
+      .returning();
 
-    const todoItemUpdated = result.rows[0] as TodoItem;
+    const todoItemUpdated = result[0];
 
     if (!todoItemUpdated) {
       res.status(404).json({ message: "Todo Item not found" });
@@ -206,19 +215,19 @@ export const deleteTodo = async (
   }
 
   try {
-    const result = await pool.query(
-      "DELETE FROM todos WHERE id = $1 RETURNING *",
-      [id]
-    );
+    const result = await db
+      .delete(todos)
+      .where(eq(todos.id, Number(id)))
+      .returning();
 
-    const todoDelete = result.rows[0] as TodoItem;
+    const deletedTodo = result[0];
 
-    if (!todoDelete) {
+    if (!deletedTodo) {
       res.status(404).json({ message: "Todo Item not found" });
       return;
     }
 
-    res.status(200).json(todoDelete);
+    res.status(200).json(deletedTodo);
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: "Internal server error" });
