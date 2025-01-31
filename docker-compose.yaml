@@ -1,7 +1,7 @@
-version: "3.9"
 services:
   web:
-    build: .
+    build:
+      context: .
     ports:
       - "3000:3000"
     environment:
@@ -13,9 +13,8 @@ services:
       DB_PASSWORD: ${DB_PASSWORD}
     depends_on:
       - db
-    # volumes:
-    #   - ./src:/app/src
-    # restart: unless-stopped # Restart policy
+      - migrate
+
   db:
     image: postgres:15
     environment:
@@ -23,15 +22,41 @@ services:
       POSTGRES_USER: ${DB_USER}
       POSTGRES_PASSWORD: ${DB_PASSWORD}
     ports:
-      - "5432:5432" # Only needed for external access (e.g., pgAdmin)
+      - "5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
       interval: 10s
       timeout: 5s
       retries: 5
       start_period: 10s
-    restart: unless-stopped # Restart policy
+    restart: unless-stopped
+
+  migrate:
+    build: .
+    depends_on:
+      db:
+        condition: service_healthy  # Wait for the db to be healthy
+    environment:
+      NODE_ENV: production
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_NAME: ${DB_NAME}
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+      PGPASSWORD: ${DB_PASSWORD}
+    entrypoint: ["sh", "-c"]
+    command: >
+      sh -c "
+        echo 'Waiting for database to be ready...';
+        until pg_isready -h $$DB_HOST -p $$DB_PORT -U $$DB_USER -d $$DB_NAME; do
+          sleep 2;
+        done;
+        echo 'Database is ready! Running migrations...';
+        npx drizzle-kit push:pg;
+        echo 'Migrations completed!';
+      "
+
 volumes:
   pgdata:
