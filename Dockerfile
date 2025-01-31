@@ -14,7 +14,8 @@ RUN npm ci --omit=dev --production
 COPY . .
 
 # Install tsc-alias for path aliasing
-RUN npm install --save-dev tsc-alias
+RUN npm install --save-dev tsc-alias drizzle-kit @types/pg pg drizzle-orm
+RUN npx drizzle-kit generate
 
 # Build the TypeScript code
 RUN npm run build
@@ -24,20 +25,28 @@ FROM node:20-alpine
 
 WORKDIR /app
 
+# Install PostgreSQL client tools
+RUN apk add --no-cache postgresql-client
+
+USER root
+RUN chown -R node:node /app
+
 # Copy only the necessary files from the builder stage
 COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/package*.json ./
+COPY --from=builder /app/drizzle ./drizzle
+COPY --from=builder /app/src/db ./src/db
+COPY --from=builder /app/entrypoint.sh ./
+COPY --from=builder /app/drizzle.config.ts ./
 
-# Set environment variables (if needed)
+# Set environment variables
 ENV NODE_ENV production
 ENV PORT 3000
 
 # Expose the port your app listens on
 EXPOSE ${PORT}
 
-# DB migrations
-# COPY --from=builder /app/db/migrations /docker-entrypoint-initdb.d/
+RUN chmod +x entrypoint.sh
 
-# Start the application
-CMD ["node", "--experimental-specifier-resolution=node", "dist/index.js"]
+CMD ["sh", "entrypoint.sh"]
